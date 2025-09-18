@@ -61,6 +61,6 @@ jobs:
           version: 'v1.34.0'
       - name: Deploy to Kubernetes
         run: |
-           kubectl set image k8s/deploy/wisecow-app wisecow-app=harekl14/wisecow-app:$GITHUB_SHA
-           kubectl rollout restart k8s/deploy/wisecow-app
+           kubectl set image deploy/wisecow wisecow=harekl14/wisecow-app:$GITHUB_SHA
+           kubectl rollout restart deploy/wisecow
 
