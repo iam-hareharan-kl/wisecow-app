@@ -77,7 +77,7 @@ on:
 
 jobs:
   build-and-deploy:
-    runs-on: self-hosted   # <--- your self-hosted runner where kind is running
+    runs-on: ubuntu-latest   # <--- your self-hosted runner where kind is running
 
     permissions:
       contents: read
