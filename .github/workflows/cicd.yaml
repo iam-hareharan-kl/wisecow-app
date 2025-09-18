@@ -61,9 +61,7 @@ jobs:
           version: 'v1.34.0'
       - name: Configure Kubeconfig #testing
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" base64 -decode > $HOME/.kube/config
-          cat $HOME/.kube/config   
+          kubectl apply -f k8s/kubeconfig.yaml  
 
       - name: Deploy to Kubernetes
         run: |
