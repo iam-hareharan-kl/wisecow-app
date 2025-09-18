@@ -9,10 +9,10 @@ metadata:
 spec:
   tls:
   - hosts:
-      - wisecow.192.168.49.2.nip.io   # Minikube ingress IP for domain
+      - wisecow.127.0.0.1.nip.io   
     secretName: wisecow-tls
   rules:
-  - host: wisecow.192.168.49.2.nip.io
+  - host: wisecow.127.0.0.1.nip.io
     http:
       paths:
       - path: /

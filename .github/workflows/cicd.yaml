@@ -1,30 +1,94 @@
-name: cicd-wisecow
+# name: cicd-wisecow
+
+# on:
+#   push:
+#     branches:
+#       - main        # Trigger only when pushing to main
+
+# env:
+#   IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wisecow
+
+# permissions:
+#   contents: read
+#   packages: write   # permissions required to push to GHCR
+#   id-token: write
+
+# jobs:
+#   build-and-push:
+#     runs-on: ubuntu-latest
+#     outputs:
+#       image-tag: ${{ steps.set_tag.outputs.tag }}
+#     steps:
+#       - name: Checkout source
+#         uses: actions/checkout@v4
+
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+
+#       - name: Log in to GitHub Container Registry
+#         uses: docker/login-action@v3
+#         with:
+#           registry: ghcr.io
+#           username: ${{ github.actor }}
+#           password: ${{ secrets.GH_TOKEN }}
+
+#       - name: Set image tag
+#         id: set_tag
+#         run: echo "tag=sha-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
+
+#       - name: Build and push Docker image
+#         uses: docker/build-push-action@v5
+#         with:
+#           context: .
+#           file: ./Dockerfile
+#           push: true
+#           tags: |
+#             ${{ env.IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}
+#             ${{ env.IMAGE_NAME }}:latest
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
+
+#   deploy:
+#     needs: build-and-push
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout repo
+#         uses: actions/checkout@v4
+
+#       - name: Set up kubectl
+#         uses: azure/setup-kubectl@v3
+#         with:
+#           version: 'v1.34.0'
+#       - name: Configure Kubeconfig #testing
+#         run: |
+#           kubectl apply -f k8s/kubeconfig.yaml 
+
+#       - name: Deploy to Kubernetes
+#         run: |
+#           kubectl set image deploy/wisecow wisecow=${{ env.IMAGE_NAME }}:latest --record
+#           kubectl rollout status deploy/wisecow
+
+
+name: CI/CD Pipeline for Kind
 
 on:
   push:
-    branches:
-      - main        # Trigger only when pushing to main
-
-env:
-  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/wisecow
-
-permissions:
-  contents: read
-  packages: write   # permissions required to push to GHCR
-  id-token: write
+    branches: ["main"]
 
 jobs:
-  build-and-push:
-    runs-on: ubuntu-latest
-    outputs:
-      image-tag: ${{ steps.set_tag.outputs.tag }}
+  build-and-deploy:
+    runs-on: self-hosted   # <--- your self-hosted runner where kind is running
+
+    permissions:
+      contents: read
+      packages: write
+
     steps:
-      - name: Checkout source
+      # Checkout repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
+      # Log in to GHCR
       - name: Log in to GitHub Container Registry
         uses: docker/login-action@v3
         with:
@@ -32,38 +96,23 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GH_TOKEN }}
 
-      - name: Set image tag
-        id: set_tag
-        run: echo "tag=sha-${GITHUB_SHA::8}" >> $GITHUB_OUTPUT
-
+      # Build & Push Docker image
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
           context: .
           file: ./Dockerfile
           push: true
-          tags: |
-            ${{ env.IMAGE_NAME }}:${{ steps.set_tag.outputs.tag }}
-            ${{ env.IMAGE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
 
-  deploy:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
-
-      - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
-        with:
-          version: 'v1.34.0'
-      - name: Configure Kubeconfig #testing
+      # Load image into kind (so pods use local image without pulling)
+      - name: Load image into kind
         run: |
-          kubectl apply -f k8s/kubeconfig.yaml  
+          kind load docker-image ghcr.io/${{ github.repository_owner }}/wisecow:v1 --name kind
 
-      - name: Deploy to Kubernetes
+      # Deploy to kind cluster
+      - name: Deploy manifests
         run: |
-          kubectl set image deploy/wisecow wisecow=${{ env.IMAGE_NAME }}:latest --record
-          kubectl rollout status deploy/wisecow
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/wisecow -n default
+
