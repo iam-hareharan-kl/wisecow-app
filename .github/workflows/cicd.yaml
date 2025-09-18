@@ -10,7 +10,7 @@ env:
 
 permissions:
   contents: read
-  packages: write   # required to push to GHCR
+  packages: write   # permissions required to push to GHCR
   id-token: write
 
 jobs:
