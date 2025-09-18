@@ -59,8 +59,14 @@ jobs:
         uses: azure/setup-kubectl@v3
         with:
           version: 'v1.34.0'
+      - name: Configure Kubeconfig
+        run: |
+          mkdir -p $HOME/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
+
       - name: Deploy to Kubernetes
         run: |
-           kubectl set image deploy/wisecow wisecow=harekl14/wisecow-app:$GITHUB_SHA
-           kubectl rollout restart deploy/wisecow
-
+          kubectl set image deployment/wisecow \
+          wisecow=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest \
+          --record
+          kubectl rollout status deployment/wisecow
