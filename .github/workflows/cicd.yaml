@@ -59,15 +59,9 @@ jobs:
         uses: azure/setup-kubectl@v3
         with:
           version: 'v1.34.0'
-
-      - name: Configure kubeconfig
+      - name: Deploy to Kubernetes
         run: |
-          mkdir -p $HOME/.kube
-          echo "${{ secrets.KUBE_CONFIG }}" > $HOME/.kube/config
-          chmod 600 $HOME/.kube/config
-
-      - name: Update Kubernetes deployment
-        run: |
-          IMAGE=${{ env.IMAGE_NAME }}:${{ needs.build-and-push.outputs.image-tag }}
-          kubectl -n wisecow set image deployment/wisecow wisecow=$IMAGE --record
-          kubectl -n wisecow rollout status deployment/wisecow --timeout=120s
+          kubectl apply -f k8s/deploy.yaml
+          kubectl apply -f k8s/service.yaml
+          kubectl apply -f k8s/ingress.yaml
+          kubectl apply -f k8s/clusterissuer.yaml
