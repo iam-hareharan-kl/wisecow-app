@@ -16,7 +16,7 @@ spec:
     spec:
       containers:
       - name: wisecow
-        image: harekl14/wisecow:v1
+        image: ghcr.io/iam-hareharan-kl/wisecow:v1
         # Image will be automatically updated by CI/CD pipeline
         imagePullPolicy: Always
         ports:
