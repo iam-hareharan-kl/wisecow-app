@@ -1,0 +1,37 @@
+apiVersion: security.kubearmor.com/v1
+kind: KubeArmorPolicy
+metadata:
+  name: wisecow-zero-trust
+  namespace: wisecow
+spec:
+  severity: 8
+  message: "Zero-trust whitelist for wisecow: allow only explicitly required processes, files, and network."
+  action: Allow
+  selector:
+    matchLabels:
+      app: wisecow
+  process:
+    matchPaths:
+      - path: /app/wisecow            
+      - path: /usr/local/bin/wisecow  
+  file:
+    matchDirectories:
+      - dir: /app                     
+        recursive: true
+        fromSource:
+          - path: /app/wisecow
+          - path: /usr/local/bin/wisecow
+      - dir: /var/log/wisecow         
+        recursive: true
+        fromSource:
+          - path: /app/wisecow
+      - dir: /etc/wisecow              
+        recursive: true
+        fromSource:
+          - path: /app/wisecow
+  network:
+    matchProtocols:
+      - protocol: TCP
+        fromSource:
+          - path: /app/wisecow
+          - path: /usr/local/bin/wisecow

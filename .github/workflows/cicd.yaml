@@ -78,6 +78,12 @@ jobs:
           kubectl create secret tls wisecow-tls \
           --cert=tls.crt --key=tls.key -n wisecow
 
+      # KubeArmor Policy
+      - name: Apply KubeArmor Policy
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubearmor/KubeArmor/main/deployments/kubearmor/kubearmor.yaml
+          kubectl wait --for=condition=Available --timeout=300s deployment -n kube-system --all
+
       # Deploy manifests
       - name: Deploy manifests
         run: |
@@ -85,4 +91,6 @@ jobs:
           kubectl apply -f k8s/clusterissuer.yaml -n wisecow
           kubectl apply -f k8s/ingress.yaml -n wisecow
           kubectl apply -f k8s/service.yaml -n wisecow
+          kubectl apply -f k8s/kube-armor.yaml -n wisecow
+          kubectl get ksp -n wisecow
  
