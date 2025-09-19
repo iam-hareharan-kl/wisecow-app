@@ -93,6 +93,7 @@ jobs:
         with:
           cluster_name: kind
           version: v0.30.0
+          config: ./kind-config.yaml
 
       # Log in to GHCR
       - name: Log in to GitHub Container Registry
@@ -141,9 +142,4 @@ jobs:
       - name: Deploy manifests
         run: |
           kubectl apply -f k8s/
-
-      # Run Test
-      - name: Run
-        run: |
-          kubectl get svc -n wisecow
-          kubectl get ingress -n wisecow
+          curl -k https://wisecow.127.0.0.1.nip.io
