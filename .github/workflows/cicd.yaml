@@ -68,70 +68,77 @@
 #           kubectl rollout status deploy/wisecow
 
 
- name: CI/CD Pipeline for Kind
+name: CI/CD Pipeline for Kind
 
- on:
-   push:
-     branches: ["main"]
+on:
+  push:
+    branches: ["main"]
 
- jobs:
-   build-and-deploy:
-     runs-on: ubuntu-latest   
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest   
 
-     permissions:
-       contents: read
-       packages: write
+    permissions:
+      contents: read
+      packages: write
 
-     steps:
-       # Checkout repo
-       - name: Checkout repository
-         uses: actions/checkout@v4
+    steps:
+      # Checkout repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
-       - name: Setup kind cluster
-         uses: helm/kind-action@v1.8.0
-         with:
+      # Setup kind cluster
+      - name: Setup kind cluster
+        uses: helm/kind-action@v1.8.0
+        with:
           cluster_name: kind
           version: v0.30.0
 
-       # Log in to GHCR
-       - name: Log in to GitHub Container Registry
-         uses: docker/login-action@v3
-         with:
-           registry: ghcr.io
-           username: ${{ github.actor }}
-           password: ${{ secrets.GH_TOKEN }}
+      # Log in to GHCR
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GH_TOKEN }}
 
-       # Build & Push Docker image
-       - name: Build and push Docker image
-         uses: docker/build-push-action@v5
-         with:
-           context: .
-           file: ./Dockerfile
-           push: true
-           tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
+      # Build & Push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
       
-       - name: Setup cert-manager
-         run: |
-           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
-           kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
+      # Setup cert-manager
+      - name: Install cert-manager
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+          kubectl rollout status deploy/cert-manager -n cert-manager --timeout=300s
+          kubectl rollout status deploy/cert-manager-cainjector -n cert-manager --timeout=300s
+          kubectl rollout status deploy/cert-manager-webhook -n cert-manager --timeout=300s
 
-       - name: Install ingress-nginx
-         run: |
-            kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
-            
+      # Install ingress-nginx
+      - name: Install ingress-nginx
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --namespace ingress-nginx \
+           --for=condition=Ready pod \
+           --selector=app.kubernetes.io/component=controller \
+           --timeout=180s
 
+      # Load image into kind (avoid external pulling)
+      - name: Load image into kind
+        run: |
+          kind load docker-image ghcr.io/${{ github.repository_owner }}/wisecow:v1 --name kind
 
+      # Create namespace
+      - name: Create namespace
+        run: kubectl create namespace wisecow || true
 
-       # Load image into kind (so pods use local image without pulling)
-       - name: Load image into kind
-         run: |
-           kind load docker-image ghcr.io/${{ github.repository_owner }}/wisecow:v1 --name kind
-
-       # Deploy to kind cluster
-       - name: Create namespace
-         run: kubectl create namespace wisecow || true
-
-       - name: Deploy manifests
-         run: |
-           kubectl apply -f k8s/
-           kubectl rollout status deployment/wisecow -n wisecow
+      # Deploy Kubernetes manifests
+      - name: Deploy manifests
+        run: |
+          kubectl apply -f k8s/
+          kubectl rollout status deployment/wisecow -n wisecow
