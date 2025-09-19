@@ -111,6 +111,12 @@ jobs:
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
 
+      # Install cert-manager
+      - name: Setup cert-manager
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+          kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
+
       - name: Install ingress-nginx without admission webhook
         run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
