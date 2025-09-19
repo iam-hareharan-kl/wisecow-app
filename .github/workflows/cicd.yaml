@@ -81,8 +81,11 @@ jobs:
       # KubeArmor Policy
       - name: Apply KubeArmor Policy
         run: |
-          kubectl apply -f https://raw.githubusercontent.com/kubearmor/KubeArmor/main/deployments/kubearmor/kubearmor.yaml
-          kubectl wait --for=condition=Available --timeout=300s deployment -n kube-system --all
+          helm repo add kubearmor https://kubearmor.github.io/charts
+          helm repo update
+          helm install kubearmor kubearmor/kubearmor -n kubearmor --create-namespace
+          kubectl get pods -n kubearmor #verify installation
+
 
       # Deploy manifests
       - name: Deploy manifests
