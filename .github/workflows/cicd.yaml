@@ -114,6 +114,21 @@ jobs:
       - name: Setup cert-manager
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+          kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
+          
+      - name: Setup ingress-nginx
+        run: |
+          kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.1/deploy/static/provider/kind/deploy.yaml
+          kubectl wait --for=condition=Available --timeout=300s deployment -n ingress-nginx --all
+
+      - name: TLS Configure
+        run: |
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -out tls.crt -keyout tls.key \
+          -subj "/CN=wisecow.127.0.0.1.nip.io/O=wisecow"
+
+          kubectl create secret tls wisecow-tls \ 
+          --cert=tls.crt --key=tls.key -n wisecow
 
 
       # Load image into kind (so pods use local image without pulling)
