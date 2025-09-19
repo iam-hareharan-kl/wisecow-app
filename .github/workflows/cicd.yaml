@@ -145,4 +145,5 @@ jobs:
       # Run Test
       - name: Run
         run: |
-          curl -k https://wisecow.127.0.0.1.nip.io 
+          kubectl get svc -n wisecow
+          kubectl get ingress -n wisecow
