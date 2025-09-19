@@ -121,7 +121,7 @@
             kubectl wait --namespace ingress-nginx \
              --for=condition=Ready pod \
              --selector=app.kubernetes.io/component=controller \
-             --timeout=180s
+             --timeout=300s
 
 
 
@@ -133,7 +133,7 @@
        # Deploy to kind cluster
        - name: Create namespace
          run: kubectl create namespace wisecow || true
-         
+
        - name: Deploy manifests
          run: |
            kubectl create namespace wisecow
