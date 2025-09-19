@@ -141,4 +141,3 @@ jobs:
       - name: Deploy manifests
         run: |
           kubectl apply -f k8s/
-          kubectl rollout status deployment/wisecow -n wisecow
