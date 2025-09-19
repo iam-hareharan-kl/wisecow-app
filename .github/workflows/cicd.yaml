@@ -68,145 +68,74 @@
 #           kubectl rollout status deploy/wisecow
 
 
-# name: CI/CD Pipeline for Kind
+ name: CI/CD Pipeline for Kind
 
-# on:
-#   push:
-#     branches: ["main"]
+ on:
+   push:
+     branches: ["main"]
 
-# jobs:
-#   build-and-deploy:
-#     runs-on: ubuntu-latest   # <--- your self-hosted runner where kind is running
+ jobs:
+   build-and-deploy:
+     runs-on: ubuntu-latest   
 
-#     permissions:
-#       contents: read
-#       packages: write
+     permissions:
+       contents: read
+       packages: write
 
-#     steps:
-#       # Checkout repo
-#       - name: Checkout repository
-#         uses: actions/checkout@v4
+     steps:
+       # Checkout repo
+       - name: Checkout repository
+         uses: actions/checkout@v4
 
-#       - name: Setup kind cluster
-#         uses: helm/kind-action@v1.8.0
-#         with:
-#           cluster_name: kind
-#           version: v0.30.0  
+       - name: Setup kind cluster
+         uses: helm/kind-action@v1.8.0
+         with:
+          cluster_name: kind
+          version: v0.30.0
 
-#       # Log in to GHCR
-#       - name: Log in to GitHub Container Registry
-#         uses: docker/login-action@v3
-#         with:
-#           registry: ghcr.io
-#           username: ${{ github.actor }}
-#           password: ${{ secrets.GH_TOKEN }}
+       # Log in to GHCR
+       - name: Log in to GitHub Container Registry
+         uses: docker/login-action@v3
+         with:
+           registry: ghcr.io
+           username: ${{ github.actor }}
+           password: ${{ secrets.GH_TOKEN }}
 
-#       # Build & Push Docker image
-#       - name: Build and push Docker image
-#         uses: docker/build-push-action@v5
-#         with:
-#           context: .
-#           file: ./Dockerfile
-#           push: true
-#           tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
+       # Build & Push Docker image
+       - name: Build and push Docker image
+         uses: docker/build-push-action@v5
+         with:
+           context: .
+           file: ./Dockerfile
+           push: true
+           tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
       
-#       - name: Setup cert-manager
-#         run: |
-#           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
-#           kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
-          
-#       - name: Setup ingress-nginx
-#         run: |
-#           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.9.1/deploy/static/provider/kind/deploy.yaml
-#           kubectl wait --for=condition=Available --timeout=300s deployment -n ingress-nginx --all
+       - name: Setup cert-manager
+         run: |
+           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+           kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
+
+       - name: Install ingress-nginx
+         run: |
+            kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
+            kubectl wait --namespace ingress-nginx \
+             --for=condition=Ready pod \
+             --selector=app.kubernetes.io/component=controller \
+             --timeout=180s
 
 
-#       # Load image into kind (so pods use local image without pulling)
-#       - name: Load image into kind
-#         run: |
-#           kind load docker-image ghcr.io/${{ github.repository_owner }}/wisecow:v1 --name kind
 
-#       # Deploy to kind cluster
-#       - name: Deploy manifests
-#         run: |
-#           kubectl create namespace wisecow
-#           kubectl apply -f k8s/
-#           kubectl rollout status deployment/wisecow -n wisecow
+       # Load image into kind (so pods use local image without pulling)
+       - name: Load image into kind
+         run: |
+           kind load docker-image ghcr.io/${{ github.repository_owner }}/wisecow:v1 --name kind
 
-
-name: CI-CD Wisecow
-
-on:
-  push:
-    branches:
-      - main
-
-jobs:
-  build-deploy:
-    runs-on: ubuntu-latest
-
-    permissions:
-      contents: read
-      packages: write
-      id-token: write
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-
-    # -------------------------
-    # Build & Push Docker Image
-    # -------------------------
-    - name: Log in to GHCR
-      uses: docker/login-action@v2
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
-    - name: Build and Push Docker image
-      uses: docker/build-push-action@v4
-      with:
-        context: .
-        push: true
-        tags: ghcr.io/${{ github.repository_owner }}/wisecow:latest
-
-    # -------------------------
-    # Setup Kind cluster
-    # -------------------------
-    - name: Setup Kind
-      uses: helm/kind-action@v1.8.0
-      with:
-        cluster_name: kind
-        version: v0.20.0
-
-    # -------------------------
-    # Install cert-manager
-    # -------------------------
-    - name: Install cert-manager
-      run: |
-        kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
-        kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
-
-    # -------------------------
-    # Install ingress-nginx
-    # -------------------------
-    - name: Install ingress-nginx
-      run: |
-        kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
-        kubectl wait --namespace ingress-nginx \
-          --for=condition=Ready pod \
-          --selector=app.kubernetes.io/component=controller \
-          --timeout=180s
-
-    # -------------------------
-    # Deploy app
-    # -------------------------
-    - name: Create namespace
-      run: kubectl create namespace wisecow || true
-
-    - name: Deploy manifests
-      run: |
-        kubectl apply -f k8s/
-        kubectl rollout status deployment/wisecow -n wisecow
-
+       # Deploy to kind cluster
+       - name: Create namespace
+         run: kubectl create namespace wisecow || true
+         
+       - name: Deploy manifests
+         run: |
+           kubectl create namespace wisecow
+           kubectl apply -f k8s/
+           kubectl rollout status deployment/wisecow -n wisecow
