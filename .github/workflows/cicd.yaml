@@ -110,21 +110,32 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
-      
-      # Setup cert-manager
-      - name: Install cert-manager
+
+      # Install cert-manager
+      - name: Setup cert-manager
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
-          kubectl rollout status deploy/cert-manager -n cert-manager --timeout=300s
-          kubectl rollout status deploy/cert-manager-cainjector -n cert-manager --timeout=300s
-          kubectl rollout status deploy/cert-manager-webhook -n cert-manager --timeout=300s
+          kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
 
       # Install ingress-nginx
       - name: Install ingress-nginx
         run: |
           kubectl apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.10.1/deploy/static/provider/kind/deploy.yaml
 
-      # Load image into kind (avoid external pulling)
+      # Wait for ingress-nginx to be ready (fix for webhook issue)
+      - name: Wait for ingress-nginx
+        run: |
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=Available deployment/ingress-nginx-controller \
+            --timeout=180s
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=complete job/ingress-nginx-admission-create \
+            --timeout=180s
+          kubectl wait --namespace ingress-nginx \
+            --for=condition=complete job/ingress-nginx-admission-patch \
+            --timeout=180s
+
+      # Load image into kind
       - name: Load image into kind
         run: |
           kind load docker-image ghcr.io/${{ github.repository_owner }}/wisecow:v1 --name kind
@@ -133,7 +144,7 @@ jobs:
       - name: Create namespace
         run: kubectl create namespace wisecow || true
 
-      # Deploy Kubernetes manifests
+      # Deploy manifests
       - name: Deploy manifests
         run: |
           kubectl apply -f k8s/
