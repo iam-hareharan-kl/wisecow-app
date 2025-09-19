@@ -151,5 +151,8 @@ jobs:
       # Deploy manifests
       - name: Deploy manifests
         run: |
-          kubectl apply -f k8s/
-          curl -k https://wisecow.127.0.0.1.nip.io 
+          kubectl apply -f k8s/deploy.yaml -n wisecow
+          kubectl apply -f k8s/clusterissuer.yaml -n wisecow
+          kubectl apply -f k8s/ingress.yaml -n wisecow
+          kubectl apply -f k8s/service.yaml -n wisecow
+ 
