@@ -117,7 +117,8 @@ jobs:
         run: |
           kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
           kubectl wait --for=condition=Available --timeout=300s deployment -n cert-manager --all
-
+      
+      # Nginx Installation
       - name: Install ingress-nginx without admission webhook
         run: |
           helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
@@ -126,7 +127,15 @@ jobs:
             --namespace ingress-nginx --create-namespace \
             --set controller.admissionWebhooks.enabled=false
 
+      # TLS secret
+      - name: Create TLS secret
+        run: |
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -out tls.crt -keyout tls.key \
+          -subj "/CN=wisecow.127.0.0.1.nip.io/O=wisecow"
 
+          kubectl create secret tls wisecow-tls \
+          --cert=tls.crt --key=tls.key -n wisecow
 
       # Load image into kind
       - name: Load image into kind
@@ -142,4 +151,4 @@ jobs:
       - name: Deploy manifests
         run: |
           kubectl apply -f k8s/
-          curl -k https://wisecow.127.0.0.1.nip.io
+          curl -k https://wisecow.127.0.0.1.nip.io 
