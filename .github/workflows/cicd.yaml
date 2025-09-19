@@ -141,3 +141,8 @@ jobs:
       - name: Deploy manifests
         run: |
           kubectl apply -f k8s/
+
+      # Run Test
+      - name: Run
+        run: |
+          curl -k https://wisecow.127.0.0.1.nip.io 
