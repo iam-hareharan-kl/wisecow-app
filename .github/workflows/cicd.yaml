@@ -110,6 +110,11 @@ jobs:
           file: ./Dockerfile
           push: true
           tags: ghcr.io/${{ github.repository_owner }}/wisecow:v1
+      
+      - name: Setup cert-manager
+        run: |
+          kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.14.4/cert-manager.yaml
+
 
       # Load image into kind (so pods use local image without pulling)
       - name: Load image into kind
@@ -119,6 +124,7 @@ jobs:
       # Deploy to kind cluster
       - name: Deploy manifests
         run: |
+          kubectl create namespace wisecow
           kubectl apply -f k8s/
-          kubectl rollout status deployment/wisecow -n default
+          kubectl rollout status deployment/wisecow -n wisecow
 
