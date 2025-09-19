@@ -127,15 +127,6 @@ jobs:
             --namespace ingress-nginx --create-namespace \
             --set controller.admissionWebhooks.enabled=false
 
-      # TLS secret
-      - name: Create TLS secret
-        run: |
-          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
-          -out tls.crt -keyout tls.key \
-          -subj "/CN=wisecow.127.0.0.1.nip.io/O=wisecow"
-
-          kubectl create secret tls wisecow-tls \
-          --cert=tls.crt --key=tls.key -n wisecow
 
       # Load image into kind
       - name: Load image into kind
@@ -146,6 +137,16 @@ jobs:
       # Create namespace
       - name: Create namespace
         run: kubectl create namespace wisecow || true
+      
+      # TLS secret
+      - name: Create TLS secret
+        run: |
+          openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+          -out tls.crt -keyout tls.key \
+          -subj "/CN=wisecow.127.0.0.1.nip.io/O=wisecow"
+
+          kubectl create secret tls wisecow-tls \
+          --cert=tls.crt --key=tls.key -n wisecow
 
       # Deploy manifests
       - name: Deploy manifests
